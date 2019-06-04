@@ -13,6 +13,6 @@ try:
 	data = sub( r'<script.*?</script>', '', data.read(), flags = DOTALL )
 	root = ElementTree.fromstring( data )
 	rows = next( root.iter( '{http://www.w3.org/1999/xhtml}tbody' ) ).iter( '{http://www.w3.org/1999/xhtml}tr' )
-	print '\n'.join( '\t'.join( filter( None, [ _.text for _ in r.iter() ] ) ) for r in rows )
+	print('\n'.join( '\t'.join( filter( None, [ _.text for _ in r.iter() ] ) ) for r in rows ))
 except:
 	pass
