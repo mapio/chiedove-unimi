@@ -1,4 +1,4 @@
-PYTHON=/usr/bin/env python
+PYTHON=/usr/bin/env python3
 
 chiedove: chiedove-unimi/__main__.py
 	zip --quiet --junk-paths chiedove-unimi chiedove-unimi/__main__.py
