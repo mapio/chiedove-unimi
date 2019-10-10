@@ -10,20 +10,20 @@ DETAIL_URL = 'https://www.unimi.it/it/ugov/person/'
     
 name = argv[1]
 
-#try:
-people = []
-for item in loads(urlopen(SEARCH_URL, data.format(name).encode('utf-8')).read().decode('utf-8')):
-    if item['command'] == 'insert':
-        for match in finditer(r'<a href="/it/ugov/person/([^"]+)"', item['data']):
-            people.append(match.group(1))
+try:
+    people = []
+    for item in loads(urlopen(SEARCH_URL, data.format(name).encode('utf-8')).read().decode('utf-8')):
+        if item['command'] == 'insert':
+            for match in finditer(r'<a href="/it/ugov/person/([^"]+)"', item['data']):
+                people.append(match.group(1))
 
-DETAIL_URL = 'https://www.unimi.it/it/ugov/person/'
-for person in people:
-    data = urlopen(DETAIL_URL + person).read().decode('utf-8')
-    info = [match.group(1).strip() for match in finditer(r'<title>([^<]+)\|.*</title>', data)]
-    if not name in info[0].lower(): continue
-    info.extend(match.group(1).strip() for match in finditer(r'<a href="mailto:([^"]+)"', data))
-    info.extend(match.group(1).strip() for match in finditer(r'<div\s+class="pad-icon">([^<]+)</div>', data))
-    print('\t'.join(info))
-#except:
-#    pass
+    DETAIL_URL = 'https://www.unimi.it/it/ugov/person/'
+    for person in people:
+        data = urlopen(DETAIL_URL + person).read().decode('utf-8')
+        info = [match.group(1).strip() for match in finditer(r'<title>([^<]+)\|.*</title>', data)]
+        if not name in info[0].lower(): continue
+        info.extend(match.group(1).strip() for match in finditer(r'<a href="mailto:([^"]+)"', data))
+        info.extend(match.group(1).strip() for match in finditer(r'<div\s+class="pad-icon">([^<]+)</div>', data))
+        print('\t'.join(info))
+except:
+    pass
