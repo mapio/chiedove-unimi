@@ -1,45 +1,51 @@
-from json import loads
-from re import finditer, DOTALL
+from html import unescape
+from re import finditer
 from sys import argv
 from urllib import request, parse
 
-SEARCH_URL = 'https://www.unimi.it/it/views/ajax'
+def decode_cfemail(encoded):
+    key = int(encoded[:2], 16)
+    return ''.join(chr(int(encoded[i:i+2], 16) ^ key) for i in range(2, len(encoded), 2))
+
+SEARCH_URL = 'https://www.unimi.it/it/chi-e-dove'
 DETAIL_URL = 'https://www.unimi.it/it/ugov/person/'
 
+if len(argv) < 2:
+    print('chiedove_unimi: specifica il <cognome>')
+    exit(1)
+    
 name = argv[1]
 
-data = parse.urlencode({
+url = SEARCH_URL + '?' + parse.urlencode({
     'cognome': name,
     'nome': '',
-    'ur_tipo_ruolo_target_id': 'All',
-    'view_name': 'chi_e_dove',
-    'view_display_id': 'block_1',
-    'view_args': '',
-    'view_path': '/node/7663',
-    'view_base_path': '',
-    'view_dom_id': 'ece5376832f8559006242f5655147c55cd303248b9c1f7cc4627f7021f4537d4',
-    'pager_element': '1',
-    '_drupal_ajax': '1',
-}).encode('utf-8')
+    'ur_tipi_ruoli_target_id': 'All',
+})
 
 response = request.urlopen(
-    request.Request(SEARCH_URL, data = data, headers = {'User-Agent': 'Mozilla/5.0'})
+    request.Request(url, headers = {'User-Agent': 'Mozilla/5.0'})
 ).read().decode('utf-8')
 
-#try:
-people = []
-for item in loads(response):
-    if item['command'] == 'insert':
-        for match in finditer(r'<a href="/it/ugov/person/([^"]+)"', item['data']):
-            people.append(match.group(1))
+try:
+  people = []
+  for match in finditer(r'<a href="/it/ugov/person/([^"]+)"', response):
+      slug = match.group(1)
+      if slug not in people:
+          people.append(slug)
 
-DETAIL_URL = 'https://www.unimi.it/it/ugov/person/'
-for person in people:
-    data = request.urlopen(request.Request(DETAIL_URL + person, headers = {'User-Agent': 'Mozilla/5.0'})).read().decode('utf-8')
-    info = [match.group(1).strip() for match in finditer(r'<title>([^<]+)\|.*</title>', data)]
-    if not name in info[0].lower(): continue
-    info.extend(match.group(1).strip() for match in finditer(r'<a href="mailto:([^"]+)"', data))
-    info.extend(match.group(1).strip() for match in finditer(r'<div\s+class="pad-icon">([^<]+)</div>', data))
-    print('\t'.join(info))
-#except:
-#   pass
+  for person in people:
+      data = request.urlopen(request.Request(DETAIL_URL + person, headers = {'User-Agent': 'Mozilla/5.0'})).read().decode('utf-8')
+      person_name = unescape(next(match.group(1).strip() for match in finditer(r'<title>([^<]+)\|.*</title>', data)))
+      if not name in person_name.lower(): continue
+      phones = [match.group(1).strip().replace(' ', '') for match in finditer(r'<div\s+class="pad-icon">([^<]+)</div>', data)]
+      emails = [decode_cfemail(match.group(1)) for match in finditer(r'data-cfemail="([^"]+)"', data)]
+      sedi = [match.group(1).strip() for match in finditer(r'<p class="ugov-indirizzo">([^<]+)</p>', data)]
+      print(person_name)
+      if sedi:
+          print('  Sede: ' + ', '.join(sedi))
+      if phones:
+          print('  Tel: ' + ', '.join(phones))
+      if emails:
+          print('  Email: ' + ', '.join(emails))
+except:
+   print('Si è verificato un errore nel recupero, o estrazione, dei dati.')   
